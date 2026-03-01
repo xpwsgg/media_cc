@@ -2,7 +2,7 @@
 
 一款精致小巧的跨平台桌面工具，按照媒体文件的**原始拍摄时间**自动整理照片和视频。
 
-![Screenshot](docs/screenshot.png)
+![Screenshot](screenshot.png)
 
 ## 功能特性
 
@@ -25,7 +25,7 @@
 
 ### 下载
 
-从 [Releases](https://github.com/your-username/time-archive/releases) 下载：
+从 [Releases](https://github.com/xpwsgg/media_cc/releases) 下载：
 
 - **macOS**: `.dmg`
 - **Windows**: `.msi` / `.exe`
@@ -60,9 +60,9 @@ sudo apt install ffmpeg
 
 ## 技术栈
 
-- **前端**: React + TypeScript + Tailwind CSS
+- **前端**: React 19 + TypeScript + Tailwind CSS 4 + Vite 7
 - **后端**: Rust + Tauri 2.0
-- **核心库**: kamadak-exif, md-5, walkdir, chrono
+- **核心库**: kamadak-exif, md-5, walkdir, chrono, thiserror
 
 ## 开发
 
@@ -82,14 +82,18 @@ pnpm tauri build
 ```
 ├── src/                    # React 前端
 │   ├── App.tsx
-│   └── main.tsx
+│   ├── main.tsx
+│   └── index.css
 ├── src-tauri/              # Rust 后端
 │   ├── src/
+│   │   ├── main.rs         # 入口
 │   │   ├── lib.rs          # Tauri 命令
 │   │   ├── scanner.rs      # 文件扫描
 │   │   ├── metadata.rs     # 元数据提取
 │   │   └── copier.rs       # 文件复制
 │   └── Cargo.toml
+├── vite.config.ts
+├── tsconfig.json
 └── package.json
 ```
 
