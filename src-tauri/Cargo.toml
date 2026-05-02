@@ -1,6 +1,6 @@
 [package]
 name = "media-cc"
-version = "0.1.0"
+version = "0.1.1"
 description = "Media File Organizer - Organize photos and videos by creation date"
 authors = ["xiao"]
 edition = "2021"
