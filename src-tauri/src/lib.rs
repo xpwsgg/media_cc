@@ -6,6 +6,8 @@ use copier::CopyResult;
 use scanner::MediaFile;
 use std::path::PathBuf;
 use std::process::Command;
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, State};
@@ -49,6 +51,8 @@ pub fn get_full_path() -> String {
 pub fn ffprobe_command() -> Command {
     let mut cmd = Command::new("ffprobe");
     cmd.env("PATH", get_full_path());
+    #[cfg(target_os = "windows")]
+    cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
     cmd
 }
 
@@ -345,10 +349,11 @@ fn check_ffprobe() -> SystemStatus {
         Ok(result) if result.status.success() => {
             // Try to get the path using 'which' on Unix or 'where' on Windows
             let path = if cfg!(target_os = "windows") {
-                Command::new("where")
-                    .arg("ffprobe")
-                    .env("PATH", &full_path)
-                    .output()
+                let mut cmd = Command::new("where");
+                cmd.arg("ffprobe").env("PATH", &full_path);
+                #[cfg(target_os = "windows")]
+                cmd.creation_flags(0x08000000);
+                cmd.output()
             } else {
                 Command::new("which")
                     .arg("ffprobe")
