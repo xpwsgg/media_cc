@@ -67,3 +67,21 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+
+      - name: Package Windows portable
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path "src-tauri/target/release" -Filter "media-cc.exe" | Select-Object -First 1
+          $version = "${{ github.ref_name }}"
+          Compress-Archive -Path $exe.FullName -DestinationPath "media-cc_${version}_windows_portable.zip"
+
+      - name: Upload Windows portable
+        if: matrix.platform == 'windows-latest'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          draft: true
+          files: media-cc_${{ github.ref_name }}_windows_portable.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
