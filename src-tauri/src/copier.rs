@@ -9,8 +9,8 @@ use thiserror::Error;
 pub enum CopyError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
-    #[error("Failed to create directory: {0}")]
-    CreateDir(String),
+    #[error("Failed to create directory {1}: {0}")]
+    CreateDir(#[source] std::io::Error, String),
     #[error("Too many duplicate filenames: {0}")]
     TooManyDuplicates(String),
 }
@@ -84,7 +84,7 @@ pub fn copy_file(
 
     if !date_dir.exists() {
         fs::create_dir_all(&date_dir)
-            .map_err(|_| CopyError::CreateDir(date_dir.display().to_string()))?;
+            .map_err(|e| CopyError::CreateDir(e, date_dir.display().to_string()))?;
     }
 
     let file_name = source
@@ -96,7 +96,11 @@ pub fn copy_file(
 
     match dest_path {
         Some(path) => {
-            fs::copy(source, &path)?;
+            fs::copy(source, &path).map_err(|e| {
+                // Clean up partially written file if copy failed mid-stream
+                let _ = fs::remove_file(&path);
+                CopyError::Io(e)
+            })?;
             Ok(CopyResult::Copied { dest: path })
         }
         None => Ok(CopyResult::Skipped {

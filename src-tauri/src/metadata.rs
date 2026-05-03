@@ -81,13 +81,13 @@ fn extract_file_modified_date(path: &Path) -> Option<NaiveDate> {
 /// Parse EXIF datetime string (format: "YYYY:MM:DD HH:MM:SS")
 fn parse_exif_datetime(datetime_str: &str) -> Option<NaiveDate> {
     // EXIF format: "2024:01:15 10:30:45" or "2024-01-15 10:30:45"
-    let parts: Vec<&str> = datetime_str.split(|c| c == ' ' || c == 'T').collect();
+    let parts: Vec<&str> = datetime_str.split([' ', 'T']).collect();
     if parts.is_empty() {
         return None;
     }
 
     let date_part = parts[0];
-    let date_components: Vec<&str> = date_part.split(|c| c == ':' || c == '-').collect();
+    let date_components: Vec<&str> = date_part.split([':', '-']).collect();
 
     if date_components.len() >= 3 {
         let year: i32 = date_components[0].parse().ok()?;
@@ -95,7 +95,7 @@ fn parse_exif_datetime(datetime_str: &str) -> Option<NaiveDate> {
         let day: u32 = date_components[2].parse().ok()?;
 
         // Validate date components
-        if year > 1970 && month >= 1 && month <= 12 && day >= 1 && day <= 31 {
+        if year > 1970 && (1..=12).contains(&month) && (1..=31).contains(&day) {
             return NaiveDate::from_ymd_opt(year, month, day);
         }
     }
@@ -106,12 +106,8 @@ fn parse_exif_datetime(datetime_str: &str) -> Option<NaiveDate> {
 /// Extract date from video metadata using ffprobe
 fn extract_video_date(path: &Path) -> Option<NaiveDate> {
     let output = ffprobe_command()
-        .args([
-            "-v", "quiet",
-            "-print_format", "json",
-            "-show_entries", "format_tags=creation_time",
-            path.to_str()?,
-        ])
+        .args(["-v", "quiet", "-print_format", "json", "-show_entries", "format_tags=creation_time"])
+        .arg(path)
         .output()
         .ok()?;
 
@@ -141,7 +137,7 @@ fn parse_iso_datetime(datetime_str: &str) -> Option<NaiveDate> {
         let month: u32 = components[1].parse().ok()?;
         let day: u32 = components[2].parse().ok()?;
 
-        if year > 1970 && month >= 1 && month <= 12 && day >= 1 && day <= 31 {
+        if year > 1970 && (1..=12).contains(&month) && (1..=31).contains(&day) {
             return NaiveDate::from_ymd_opt(year, month, day);
         }
     }

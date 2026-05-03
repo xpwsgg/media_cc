@@ -139,11 +139,28 @@ async fn start_copy(
     let cancel_flag = state.cancel_flag.clone();
     let is_running_flag = state.is_running.clone();
 
-    // Run copy operation in background
-    tokio::spawn(async move {
-        let source = PathBuf::from(&source_path);
-        let dest = PathBuf::from(&dest_path);
+    let source = PathBuf::from(&source_path);
+    let dest = PathBuf::from(&dest_path);
 
+    if !source.exists() || !source.is_dir() {
+        return Err("源目录不存在或不是文件夹".to_string());
+    }
+    if !dest.exists() || !dest.is_dir() {
+        return Err("目标目录不存在或不是文件夹".to_string());
+    }
+
+    // Canonicalize to compare real paths (handles trailing slashes, symlinks, etc.)
+    let source_canon = source.canonicalize().map_err(|e| format!("无法解析源路径: {}", e))?;
+    let dest_canon = dest.canonicalize().map_err(|e| format!("无法解析目标路径: {}", e))?;
+    if source_canon == dest_canon {
+        return Err("源目录和目标目录不能相同".to_string());
+    }
+
+    // Run copy operation in background (on a blocking thread to avoid stalling the async runtime)
+    let source = source.clone();
+    let dest = dest.clone();
+
+    let handle = tokio::task::spawn_blocking(move || {
         // Emit log
         let _ = app.emit(
             "copy-log",
@@ -307,10 +324,21 @@ async fn start_copy(
             },
         );
 
-        // Reset running flag
-        let mut is_running = is_running_flag.lock().await;
-        *is_running = false;
+        // Reset running flag — must happen on async runtime since Mutex is tokio::sync
+        let is_running_flag = is_running_flag.clone();
+        tokio::task::spawn(async move {
+            let mut is_running = is_running_flag.lock().await;
+            *is_running = false;
+        });
+
     });
+
+    // If the blocking task panics, surface the error
+    if let Err(e) = handle.await {
+        let mut is_running = state.is_running.lock().await;
+        *is_running = false;
+        return Err(format!("Copy task failed: {}", e));
+    }
 
     Ok(())
 }
